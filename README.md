@@ -1,6 +1,13 @@
 CDM: The Console Display Manager
 ================================
 
+New version 0.7: 
+
+	- removed consolekit support 
+	- removed xtty
+	- removed altstartx
+	- cdmrc edited for new version
+	- cdm-xlaunch removed 
 
 Invocation
 ----------

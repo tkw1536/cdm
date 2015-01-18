@@ -12,7 +12,8 @@
 #       Profjim         several incredibly useful patches
 #       lambchops468    consolekit and hibernation patches
 #       CasperVector    Massive rearchitecturing and code sanitation
-#
+#       pale3           Forking to remove some shit not needed anymore 
+# 
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
 #   the Free Software Foundation; either version 2 of the License, or
@@ -30,14 +31,15 @@
 
 name=$(basename "$0")
 longname='Console Display Manager'
-ver='0.6'
+ver='0.7'
 
 trap '' SIGINT SIGTSTP
 
 # Helper functions.
 
-warn() { (printf ' \033[01;33m*\033[00m '; echo "$name: $*") > /dev/stderr; }
-error() { (printf ' \033[01;31m*\033[00m '; echo "$name: $*") > /dev/stderr; }
+info() { printf ' \033[01;32m*\033[00m '; echo "$name: $*"; }
+warn() { (printf ' \033[01;33m*\033[00m '; echo "$name: $*") >&2 ; }
+error() { (printf ' \033[01;31m*\033[00m '; echo "$name: $*") >&2; }
 exitnormal() { exit 0; }
 exiterror() { sleep 1; exit 1; }
 exitcancel() { exit 2; }
@@ -74,11 +76,8 @@ fi
 dialogrc=${dialogrc:-}
 countfrom=${countfrom:-0}
 display=${display:-0}
-xtty=${xtty:-7}
 locktty=${locktty:-no}
-consolekit=${consolekit:-yes}
-cktimeout=${cktimeout:-30}
-altstartx=${altstartx:-no}
+timeout=${timeout:-30}
 startxlog="${startxlog:-/dev/null}"
 [[ -z "${binlist[*]}" ]] && binlist=()
 [[ -z "${namelist[*]}" ]] && namelist=()
@@ -175,10 +174,10 @@ case ${flaglist[$binindex]} in
         # Get the first empty display.
         display=0
         while ((display < 7)); do
-            if dpyinfo=$(xdpyinfo -display ":$display.0" 2>&1 1>/dev/null) ||
-                # Display is in use by another user.
+           if dpyinfo=$(xdpyinfo -display ":$display.0" 2>&1 1>/dev/null) ||
+								# Display is in use by another user.
                 [[ "$dpyinfo" == 'No protocol specified'* ]] ||
-                # Invalid MIT cookie.
+								# Invalid MIT cookie.
                 [[ "$dpyinfo" == 'Invalid MIT'* ]]
             then
                 let display+=1
@@ -194,24 +193,19 @@ case ${flaglist[$binindex]} in
                 error 'invalid TTY.'
                 exiterror
             fi
+						
             vt="${vt#/dev/tty}"
-        else
-            vt="$((xtty+display))"
         fi
 
         serverargs=(":${display}" "${serverargs[@]}" "vt$vt")
-
-        $(yesno consolekit) && launchflags=(-c -t "$cktimeout")
-        $(yesno altstartx) && launchflags=("${launchflags[@]}" --altstartx)
-        launchflags=("${launchflags[@]}" --startxlog "$startxlog")
-        if cdm-xlaunch "${launchflags[@]}" -- "${bin[@]}" -- "${serverargs[@]}"
+	    if exec startx -- "${serverargs[@]}" > "$startxlog" 2>&1
         then
             exitnormal
         else
-            warn "\`cdm-xlaunch' exited unsuccessfully."
+            warn "\`cdm' exited unsuccessfully."
             exiterror
         fi
-        ;;
+       ;;
 
     *)
         error "unknown flag: \`${flaglist[$binindex]}'."
